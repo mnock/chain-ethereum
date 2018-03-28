@@ -1,5 +1,6 @@
 package com.tunion.dubbo.chainrouter;
 
+import com.alibaba.dubbo.config.annotation.Reference;
 import com.tunion.cores.result.Results;
 import com.tunion.cores.tools.cache.JedisUtils;
 import com.tunion.cores.utils.CommConstants;
@@ -8,7 +9,6 @@ import com.tunion.cores.utils.StringUtil;
 import com.tunion.dubbo.IService.chainweb.IDubboChainWeb;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 public class CoinReceivedNotifyService {
     private static Logger logger = LoggerFactory.getLogger(CoinReceivedNotifyService.class);
 
-    @Autowired(required = false)
+    @Reference
     private IDubboChainWeb dubboChainWeb;
 
     public Results notifyCoinRecevied(String accoutAddress, int accoutType, String txid, String amount) {

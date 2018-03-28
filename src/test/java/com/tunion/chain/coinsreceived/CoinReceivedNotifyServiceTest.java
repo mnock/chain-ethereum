@@ -1,5 +1,6 @@
 package com.tunion.chain.coinsreceived;
 
+import com.alibaba.dubbo.config.annotation.Reference;
 import com.tunion.cores.BaseTest;
 import com.tunion.cores.result.Results;
 import com.tunion.cores.utils.CommConstants;
@@ -24,7 +25,7 @@ public class CoinReceivedNotifyServiceTest extends BaseTest{
 
     private static Logger logger = LoggerFactory.getLogger(CoinReceivedNotifyServiceTest.class);
 
-    @Autowired
+    @Reference
     private IDubboChainRouter iDubboChainRouter;
 
     @Autowired
