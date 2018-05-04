@@ -40,11 +40,6 @@ dependencies {
 
     compile ('com.alibaba:dubbo:2.5.7')
     compile 'io.dubbo.springboot:spring-boot-starter-dubbo:1.0.0'
-    compile ('com.github.sgroschupf:zkclient:0.1')
-            {
-                exclude group: 'log4j'
-                exclude group: 'org.slf4j'
-            }
     compile 'com.tunion.dubbo.chainrouter:chain-router:1.0.0-SNAPSHOT'
 
     compile ('org.web3j:core:3.2.0')
