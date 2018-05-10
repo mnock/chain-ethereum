@@ -11,22 +11,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
+import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.DefaultBlockParameterNumber;
-import org.web3j.protocol.core.methods.response.EthBlockNumber;
-import org.web3j.protocol.core.methods.response.EthGetBalance;
-import org.web3j.protocol.core.methods.response.EthTransaction;
-import org.web3j.protocol.core.methods.response.Transaction;
+import org.web3j.protocol.core.methods.response.*;
 import org.web3j.protocol.parity.Parity;
 import org.web3j.utils.Convert;
 import rx.Subscription;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Set;
 
 /**
  * Created by Think on 2018/2/6.
  */
-@Component("ethereumTransactionListener")
+@Component
 public class EthereumTransactionListener implements Runnable{
 
     private static Logger logger = LoggerFactory.getLogger(EthereumTransactionListener.class);
@@ -53,6 +52,69 @@ public class EthereumTransactionListener implements Runnable{
         }
     }
 
+    public boolean judgeAccount(String address)
+    {
+        boolean bRet = false;
+        try {
+            EthGetCode ethGetCode=web3j.ethGetCode(address, DefaultBlockParameterName.LATEST).send();
+            if(ethGetCode.getError()==null){
+                logger.debug("ethGetCode:"+ethGetCode.getCode());
+
+                if("0x".equals(ethGetCode.getCode()))
+                {
+                    bRet = true;
+                    logger.debug("普通账户");
+                }else{
+                    logger.debug("合约账户");
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return bRet;
+    }
+
+    public void CoinRecieveEvent(int coinType,String txid,String fromAddress,String toAddress,String value)
+    {
+        Set<String> addressSet= JedisUtils.getSetByRawkey(COIN_NAME);
+
+        boolean sendFlag=false,receiveFlage=false;
+
+        if(addressSet.contains(COIN_NAME+fromAddress))
+        {
+            sendFlag = true;
+            //发送
+            logger.info("Send Address:{}",fromAddress);
+        }
+
+        if(addressSet.contains(COIN_NAME+toAddress)) {
+            receiveFlage = true;
+            //接受
+            logger.info("Received Address:{}", toAddress);
+        }
+
+        if(sendFlag||receiveFlage) {
+            //在测试过程中发现消息可能存在重复的情况，需要进行处理
+            String oldTxid = JedisUtils.getObjectByRawkey(txid);
+            if(!StringUtil.isNullStr(oldTxid))
+            {
+                logger.error("重复的交易消息！交易txid:{}",txid);
+                return;
+            }
+
+            int timeout = 60*10;//十分钟
+            JedisUtils.setObjectByRawkey(txid,txid,timeout);
+
+            if(receiveFlage)
+            {
+                coinReceivedNotifyService.notifyCoinRecevied(toAddress, coinType,txid, value);
+            }
+
+            logger.info("{},{},{},{}", fromAddress, toAddress,txid, value);
+        }
+    }
+
     public void Listening()
     {
         try{
@@ -60,46 +122,53 @@ public class EthereumTransactionListener implements Runnable{
             Subscription subscription = web3j.transactionObservable().subscribe(tx -> {
 
                 String txid = tx.getHash();
-
-                Set<String> addressSet= JedisUtils.getSetByRawkey(COIN_NAME);
-
                 String fromAddress = tx.getFrom();
                 String toAddress = tx.getTo();
 
-                boolean sendFlag=false,receiveFlage=false;
-
-                if(addressSet.contains(COIN_NAME+fromAddress))
+                //判断接受地址是否合约地址
+                if(judgeAccount(toAddress))
                 {
-                    sendFlag = true;
-                    //发送
-                    logger.info("Send Address:{}",fromAddress);
+                    return ;
                 }
 
-                if(addressSet.contains(COIN_NAME+toAddress)) {
-                    receiveFlage = true;
-                    //接受
-                    logger.info("Received Address:{}", toAddress);
-                }
+                CoinRecieveEvent(COIN_VALUE,txid,fromAddress,toAddress, Convert.fromWei(tx.getValue().toString(), Convert.Unit.ETHER).toPlainString());
 
-                if(sendFlag||receiveFlage) {
-                    //在测试过程中发现消息可能存在重复的情况，需要进行处理
-                    String oldTxid = JedisUtils.getObjectByRawkey(txid);
-                    if(!StringUtil.isNullStr(oldTxid))
-                    {
-                        logger.error("重复的交易消息！交易txid:{}",txid);
-                        return;
-                    }
-
-                    int timeout = 60*10;//十分钟
-                    JedisUtils.setObjectByRawkey(txid,txid,timeout);
-
-                    if(receiveFlage)
-                    {
-                        coinReceivedNotifyService.notifyCoinRecevied(toAddress, COIN_VALUE,txid, Convert.fromWei(tx.getValue().toString(), Convert.Unit.ETHER).toPlainString());
-                    }
-
-                    logger.info("{},{},{},{},{},{},{},{}", fromAddress, toAddress, tx.getRaw(), tx.getGas(), tx.getGasPrice(),tx.getValue(),tx.getBlockHash(),txid);
-                }
+//                Set<String> addressSet= JedisUtils.getSetByRawkey(COIN_NAME);
+//
+//                boolean sendFlag=false,receiveFlage=false;
+//
+//                if(addressSet.contains(COIN_NAME+fromAddress))
+//                {
+//                    sendFlag = true;
+//                    //发送
+//                    logger.info("Send Address:{}",fromAddress);
+//                }
+//
+//                if(addressSet.contains(COIN_NAME+toAddress)) {
+//                    receiveFlage = true;
+//                    //接受
+//                    logger.info("Received Address:{}", toAddress);
+//                }
+//
+//                if(sendFlag||receiveFlage) {
+//                    //在测试过程中发现消息可能存在重复的情况，需要进行处理
+//                    String oldTxid = JedisUtils.getObjectByRawkey(txid);
+//                    if(!StringUtil.isNullStr(oldTxid))
+//                    {
+//                        logger.error("重复的交易消息！交易txid:{}",txid);
+//                        return;
+//                    }
+//
+//                    int timeout = 60*10;//十分钟
+//                    JedisUtils.setObjectByRawkey(txid,txid,timeout);
+//
+//                    if(receiveFlage)
+//                    {
+//                        coinReceivedNotifyService.notifyCoinRecevied(toAddress, COIN_VALUE,txid, Convert.fromWei(tx.getValue().toString(), Convert.Unit.ETHER).toPlainString());
+//                    }
+//
+//                    logger.info("{},{},{},{},{},{},{},{}", fromAddress, toAddress, tx.getRaw(), tx.getGas(), tx.getGasPrice(),tx.getValue(),tx.getBlockHash(),txid);
+//                }
 
             }, Throwable::printStackTrace);
 

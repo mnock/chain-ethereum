@@ -107,6 +107,11 @@ public class EthereumService {
 
         address=createAccount(accoutName,"",null);
 
+        if(StringUtil.isNullStr(address))
+        {
+            return new Results(CommConstants.API_RETURN_STATUS.ACCOUNT_EXIST_ERROR.value(),CommConstants.API_RETURN_STATUS.ACCOUNT_EXIST_ERROR.desc(),address);
+        }
+
         //放到缓存中，通知时需要获取
         JedisUtils.setObjectByRawkey(CommConstants.MANUFACTOR_TYPE.Ethereum.name()+address,accoutName);
 

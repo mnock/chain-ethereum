@@ -1,16 +1,19 @@
 package com.tunion.chain.coinsreceived;
 
+import com.alibaba.dubbo.config.annotation.Reference;
 import com.tunion.cores.BaseTest;
 import com.tunion.cores.result.Results;
 import com.tunion.cores.utils.CommConstants;
 import com.tunion.cores.utils.JacksonUtil;
 import com.tunion.dubbo.IService.chainrouter.IDubboChainRouter;
 import com.tunion.dubbo.chainrouter.CoinReceivedNotifyService;
+import com.tunion.ethereum.SmartContractManage;
 import com.tunion.ethereum.service.EthereumService;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.utils.Convert;
 
 import java.math.BigInteger;
@@ -24,7 +27,7 @@ public class CoinReceivedNotifyServiceTest extends BaseTest{
 
     private static Logger logger = LoggerFactory.getLogger(CoinReceivedNotifyServiceTest.class);
 
-    @Autowired
+    @Reference
     private IDubboChainRouter iDubboChainRouter;
 
     @Autowired
@@ -32,6 +35,26 @@ public class CoinReceivedNotifyServiceTest extends BaseTest{
 
     @Autowired
     private EthereumService ethereumService;
+
+    @Autowired
+    private SmartContractManage smartContractManage;
+
+    @Test
+    public void transfer()
+    {
+        try {
+
+            // 调用转账方法
+            TransactionReceipt receipt = smartContractManage.getSuperCoinSolSuperToken().transfer("0x0217E9fA458c54A2CdF4dF456cfC5d2033aBBD54", BigInteger.valueOf(3)).send();
+
+            // 打印交易Hash
+            System.out.println(receipt.getTransactionHash());
+
+        }catch (Exception e)
+        {
+
+        }
+    }
 
     @Test
     public void getBalance()
