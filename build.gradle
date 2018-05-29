@@ -42,8 +42,8 @@ dependencies {
     compile 'io.dubbo.springboot:spring-boot-starter-dubbo:1.0.0'
     compile 'com.tunion.dubbo.chainrouter:chain-router:1.0.0-SNAPSHOT'
 
-    compile ('org.web3j:core:3.2.0')
-    compile group: 'org.web3j', name: 'parity', version: '3.2.0'
+    compile ('org.web3j:core:3.4.0')
+    compile ('org.web3j:parity:3.4.0')
 
     testCompile 'org.springframework.boot:spring-boot-starter-test'
     testCompile 'junit:junit:4.12'

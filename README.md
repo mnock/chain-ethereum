@@ -4,4 +4,4 @@
 gradle build -x test
 
 #运行jar包，可以设置启动参数
-java -jar -server -Xms256M -Xmx256M -Xss256k chain-ethereum-1.0.0-SNAPSHOT.jar
+java -jar -server -Xms512M -Xmx512M -Xss256k chain-ethereum-1.0.0-SNAPSHOT.jar

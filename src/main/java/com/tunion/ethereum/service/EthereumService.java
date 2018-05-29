@@ -7,6 +7,7 @@ import com.tunion.cores.utils.CommConstants;
 import com.tunion.cores.utils.StringUtil;
 import com.tunion.ethereum.EthereumTransactionListener;
 import com.tunion.ethereum.ParityClient;
+import com.tunion.ethereum.SmartContractManage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.web3j.protocol.admin.methods.response.PersonalUnlockAccount;
 import org.web3j.protocol.core.methods.request.Transaction;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.core.methods.response.EthTransaction;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.protocol.parity.Parity;
 import org.web3j.protocol.parity.methods.response.ParityAllAccountsInfo;
 import org.web3j.utils.Convert;
@@ -36,6 +38,9 @@ public class EthereumService {
 
     @Autowired
     private EthereumTransactionListener ethereumTransactionListener;
+
+    @Autowired
+    private SmartContractManage smartContractManage;
 
     private String createAccount(String accountName,String password,AddressGroup accountInfo){
         try {
@@ -185,6 +190,10 @@ public class EthereumService {
     }
 
     public Results withdrawalCash(String accoutName, String accountAddress, String txAmount, String txFee, String comment, String commentTo) {
+        if(!"ETH".equals(commentTo))
+        {
+            return transfer(commentTo,accountAddress,txAmount,txFee);
+        }
 
         logger.info("withdrawalCash to address:{} with {} and fee {}",accountAddress,txAmount,txFee);
         Results results = null;
@@ -214,6 +223,42 @@ public class EthereumService {
                 results.setData(tradeHash);
             }else{
                 logger.error(ethSendTransaction.getError().getMessage());
+            }
+
+        }catch (Exception e){
+            logger.error("账户:[{}]交易失败!",accountId,e);
+        }
+
+        return results;
+    }
+
+    //ERC20标准协议的转账操作
+    public Results transfer(String coinType, String accountAddress, String txAmount, String txFee) {
+
+        logger.info("coinType={},withdrawalCash to address:{} with {} and fee {}",coinType,accountAddress,txAmount,txFee);
+        Results results = null;
+
+        String accountId = JedisUtils.getObjectByRawkey(CommConstants.CHAINROUTER_+CommConstants.MANUFACTOR_TYPE.Ethereum.name());
+        String password = JedisUtils.getObjectByRawkey(CommConstants.CHAINROUTER_WALLET_+CommConstants.MANUFACTOR_TYPE.Ethereum.name());
+
+        BigInteger amount =  new BigInteger(txAmount);
+
+        try{
+            //解密钱包
+            results = decryptWallet(accountId,password);
+
+            if(!CommConstants.API_RETURN_STATUS.NORMAL.value().equals(results.getStatus())) {
+                return results;
+            }
+
+            TransactionReceipt receipt = smartContractManage.getEOSsolDSToken(coinType).transfer(accountAddress,amount).send();
+
+            if(receipt.isStatusOK()){
+                String tradeHash =receipt.getTransactionHash();
+                logger.info("账户:[{}]转账到账户:[{}],交易hash:[{}]",accountId,accountAddress,tradeHash);
+                results.setData(tradeHash);
+            }else{
+                logger.error("转账失败！");
             }
 
         }catch (Exception e){

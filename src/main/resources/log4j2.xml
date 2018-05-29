@@ -28,6 +28,8 @@
         </Root>
 
         <Logger name="com.tunion.dubbo" level="debug" />
+        <!--<Logger name="org.web3j.protocol" level="debug" />-->
+        <!--<Logger name="com.tunion.ethereum" level="debug" />-->
 
     </Loggers>
 </Configuration>
